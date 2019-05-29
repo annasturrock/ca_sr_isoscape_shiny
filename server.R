@@ -1,0 +1,127 @@
+library(raster)
+library(sp)
+library(leaflet)
+library(rjson)
+library(readr)
+library(DT)
+library(sf)
+library(RColorBrewer)
+library(geojsonio)
+
+sr_data <- read.csv("ALL_Sr8786_FOR_SHINY.csv")
+sr_data_sp <- SpatialPointsDataFrame(SpatialPoints(sr_data[,c("Long_dd", "Lat_dd")]),
+                                     sr_data)
+sr_data_sf <- st_as_sf(sr_data_sp)
+# sjr_watersheds <- st_read("watershed_geo_data/SanJoaquin_River_Watershed.shp")
+# sac_watersheds <- st_read("watershed_geo_data/Sac_River_Watershed.shp")
+# watersheds <- rbind(sjr_watersheds, sac_watersheds)
+# watersheds$row <- 1:nrow(watersheds)
+
+
+# Calc means or each watershed
+# st_crs(sr_data_sf) <- st_crs(watersheds)
+# hatcheries <- c("CNH", "FEH", "THE", "NIH", "MOH", "MEH")
+# sr_data_no_hatcheries <- sr_data_sf[!(sr_data_sf$NAT_LOC %in% hatcheries),]
+# watershed_row_logical <- st_within(sr_data_no_hatcheries, watersheds) %>% lengths > 0 
+# watershed_row <- st_within(sr_data_no_hatcheries, watersheds) 
+# 
+# watershed_means <- aggregate(sr_data_no_hatcheries$Sr8786[watershed_row_logical], by=list(unlist(watershed_row)), FUN=mean)
+# names(watershed_means) <- c("row", "mean_sr")
+# 
+# # Merge
+# watersheds <- merge(watersheds, watershed_means, by = "row")
+# watersheds$mean_sr <- round(watersheds$mean_sr, 6)
+
+# Define map
+map <- leaflet() %>%
+  addTiles(
+    "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png",
+    group = "Base map"
+  ) %>%
+  addProviderTiles("Esri.OceanBasemap", group = "Terrain") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Satellite")
+
+shinyServer(function(input, output) {
+  
+  
+  output$output_table <-
+    
+    DT::renderDT({
+      
+      as.data.frame(filtered_data())[,c("Sample_ID", "Sample_type", "WaterYear",
+                                        "Site_name", "Sr8786", "SD", "Source")]
+
+      })
+      
+  
+  filtered_data <- reactive({
+    
+    water_years <- input$year_slider
+    
+    sr_data_sf[sr_data_sf$Sample_type %in% input$sample_type & 
+                                   sr_data_sf$WaterYear >= input$year_slider[1] &
+                                   sr_data_sf$WaterYear <= input$year_slider[2],]
+   
+  })
+  
+  
+  output$output_map <- renderLeaflet({
+
+    # Load point data
+    samples_to_map <- filtered_data()
+    
+    sr_pal <- colorNumeric(brewer.pal(11,"Spectral"), sr_data_sf$Sr8786, na.color = NA)
+    
+    # Create labels for polys
+    # labels <- sprintf(
+    #   paste("<strong>", "Mean Sr value", ": </strong>",
+    #         as.data.frame(watersheds)$mean_sr)
+    # ) %>% lapply(htmltools::HTML)
+    
+    map %>% addCircleMarkers(data = samples_to_map,
+                             col = sr_pal(samples_to_map$Sr8786),
+                             radius = 3,
+                             popup =paste0("<p><strong>Site name: </strong>",
+                                                  samples_to_map$Site_name,
+                                                  "<br><strong>Sr87/Sr86: </strong>",
+                                                  samples_to_map$Sr8786)) %>%
+      
+      # addPolygons(data = watersheds,
+      #             col = sr_pal(watersheds$mean_sr),
+      #             group = "Watershed mean (all yrs)",
+      #             highlightOptions = highlightOptions(
+      #               weight = 3,
+      #               color = "#FF0080",
+      #               bringToFront = TRUE,
+      #               fillOpacity = 0.7
+      #             ),
+      #             label = labels) %>%
+      
+    addLegend(pal = sr_pal, values = sr_data$Sr8786,
+              title = "Sr87/Sr86") %>%
+      # 
+      addLayersControl(baseGroups = c("Base map",
+                                      "Terrain",
+                                      "Satellite"),
+                                      # overlayGroups = c("Watershed mean (all yrs)"),
+                       options = layersControlOptions(collapsed = FALSE)) #%>%
+     # hideGroup("Watershed mean (all yrs)")
+
+    
+  })
+  
+  
+  # output$output_table <-
+  #   
+  #   DT::renderDT({
+  # 
+  #       map_data_no_geom <- map_data()
+  #       st_geometry(map_data_no_geom) <- NULL
+  #       output_table <- as.data.frame(map_data_no_geom)
+  #       DT::datatable(output_table,
+  #                     options = list(pageLength = 15),
+  #                     rownames = F)
+  # 
+  #   })
+  
+})

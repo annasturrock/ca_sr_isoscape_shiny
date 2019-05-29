@@ -1,0 +1,12 @@
+name: ca_sr_isoscape
+title: ca_sr_isoscape
+username:
+account: annasturrock
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 953232
+bundleId: 2115080
+url: https://annasturrock.shinyapps.io/ca_sr_isoscape/
+when: 1559102400.49366
+asMultiple: FALSE
+asStatic: FALSE

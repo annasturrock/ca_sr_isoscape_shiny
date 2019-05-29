@@ -1,0 +1,12 @@
+name: ca_sr_isoscape
+title: ca_sr_isoscape
+username:
+account: disarm
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 948181
+bundleId: 2107432
+url: https://disarm.shinyapps.io/ca_sr_isoscape/
+when: 1558742586.13872
+asMultiple: FALSE
+asStatic: FALSE
