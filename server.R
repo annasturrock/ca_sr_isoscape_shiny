@@ -33,15 +33,21 @@ sr_data_sf <- st_as_sf(sr_data_sp)
 # watersheds$mean_sr <- round(watersheds$mean_sr, 6)
 
 # Define map
+sr_pal <- colorNumeric(brewer.pal(11,"Spectral"), sr_data_sf$Sr8786, na.color = NA)
+
 map <- leaflet() %>%
   addTiles(
     "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png",
     group = "Base map"
   ) %>%
   addProviderTiles("Esri.OceanBasemap", group = "Terrain") %>%
-  addProviderTiles("Esri.WorldImagery", group = "Satellite")
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+  addCircleMarkers(data=sr_data_sf) %>%
+  addLegend(pal = sr_pal, values = sr_data_sf$Sr8786,
+            title = "Sr87/Sr86") 
 
-shinyServer(function(input, output) {
+
+server <- function(input, output) {
   
   
   output$output_table <-
@@ -66,49 +72,33 @@ shinyServer(function(input, output) {
   
   
   output$output_map <- renderLeaflet({
-
-    # Load point data
-    samples_to_map <- filtered_data()
-    
-    sr_pal <- colorNumeric(brewer.pal(11,"Spectral"), sr_data_sf$Sr8786, na.color = NA)
-    
-    # Create labels for polys
-    # labels <- sprintf(
-    #   paste("<strong>", "Mean Sr value", ": </strong>",
-    #         as.data.frame(watersheds)$mean_sr)
-    # ) %>% lapply(htmltools::HTML)
-    
-    map %>% addCircleMarkers(data = samples_to_map,
-                             col = sr_pal(samples_to_map$Sr8786),
-                             radius = 3,
-                             popup =paste0("<p><strong>Site name: </strong>",
-                                                  samples_to_map$Site_name,
-                                                  "<br><strong>Sr87/Sr86: </strong>",
-                                                  samples_to_map$Sr8786)) %>%
-      
-      # addPolygons(data = watersheds,
-      #             col = sr_pal(watersheds$mean_sr),
-      #             group = "Watershed mean (all yrs)",
-      #             highlightOptions = highlightOptions(
-      #               weight = 3,
-      #               color = "#FF0080",
-      #               bringToFront = TRUE,
-      #               fillOpacity = 0.7
-      #             ),
-      #             label = labels) %>%
-      
-    addLegend(pal = sr_pal, values = sr_data$Sr8786,
-              title = "Sr87/Sr86") %>%
-      # 
-      addLayersControl(baseGroups = c("Base map",
-                                      "Terrain",
-                                      "Satellite"),
-                                      # overlayGroups = c("Watershed mean (all yrs)"),
-                       options = layersControlOptions(collapsed = FALSE)) #%>%
-     # hideGroup("Watershed mean (all yrs)")
+    map
+    })
 
     
-  })
+    observeEvent(filtered_data(), {
+      leafletProxy("output_map") %>%
+         clearMarkers() %>%
+        addCircleMarkers(data =  filtered_data(),
+                         col = sr_pal(filtered_data()$Sr8786),
+                         radius = 3,
+                         popup =paste0("<p><strong>Site name: </strong>",
+                                       filtered_data()$Site_name,
+                                       "<br><strong>Sr87/Sr86: </strong>",
+                                       filtered_data()$Sr8786)) %>%
+        
+
+        # 
+        addLayersControl(baseGroups = c("Base map",
+                                        "Terrain",
+                                        "Satellite"),
+                         # overlayGroups = c("Watershed mean (all yrs)"),
+                         options = layersControlOptions(collapsed = FALSE))
+ 
+    })
+
+    
+  }
   
   
   # output$output_table <-
@@ -124,4 +114,4 @@ shinyServer(function(input, output) {
   # 
   #   })
   
-})
+

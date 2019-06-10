@@ -5,8 +5,9 @@ account: annasturrock
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 953232
-bundleId: 2115080
+bundleId: 2141788
 url: https://annasturrock.shinyapps.io/ca_sr_isoscape/
-when: 1559102400.49366
+when: 1560142404.00184
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: watershed_geo_data
